@@ -64,17 +64,17 @@ MechRegistry.registerPrototype(BlockID.elixir_collector, {
 	getPlexus: function(){
 		var target;
 		var coords = {x: this.x, y: this.y, z: this.z};
-		while (!target){
+		if (getTimer(40)) {while (!target){
 			coords.y += 1;
-			target = ElixirPlexusRegistry.getPlexus(coords);
-		}
+			target = getPlexus(coords.x, coords.y, coords.z)
+		}}
 		this.buildTube({x: this.x, y: this.y + 1, z: this.z}, coords.y);
 		return target;
 	},
 	
 	buildTube: function(coords, width){
 		for (let index = coords.y; index < width; index++){
-			World.setBlock(coords.x, index, coords.z, BlockID.machine_block, 1);
+			if (World.getBlockID(coords.x, index, coords.z) != BlockID.elixir_collector) World.setBlock(coords.x, index, coords.z, BlockID.machine_block, 1);
 		}
 	},
 	
@@ -92,3 +92,4 @@ MechRegistry.registerPrototype(BlockID.elixir_collector, {
 		}
 	}
 });
+

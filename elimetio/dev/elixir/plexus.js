@@ -1,79 +1,46 @@
 World.getWorldDir = ModAPI.requireGlobal("Level.getWorldDir");
 
-var ElixirPlexusRegistry = {
-	ElixirPlexus: function(coords){
+var plexusAll = [];
+
+var plexus = new GameObject("plexus", {
+	init: function(x, y, z){
+		this.coords = {
+			x: x,
+			y: y,
+			z: z
+		};
 		this.saturation = random(10, 100);
-		this.purity = random(20, 100);
+		this.purity = random(25, 100);
 		this.elixirs = {
 			normal: random(160000, 320000),
-			black: random(16, 32)
+			black: random(1600, 3200)
 		};
-		this.corruption = 1;
-		this.coords = coords;
-		this.showEffect = function(x, y, z){
-			if (true){		Particles.addParticle(x+0.5, y+0.5, z+0.5, Native.ParticleType.spell, 0, 0, 0, convertHex("ffff00ff"));
-			}
-		};
-		this.updateElixirStats = function(){
-			if (getTimer(60)){
-				if (random(2)){
-					this.elixirs.normal += 100
-					this.elixirs.enriched--;
-				}
-				if (random(16)){
-					this.elixirs.normal -= 100
-					this.elixirs.enriched++;
-				}
-			}
-		};
-		this.update = function(){
- 	this.showEffect(this.coords.x, this.coords.y, this.coords.z);
- 	this.updateElixirStats();
- 	World.setBlock(this.coords.x, this.coords.y, this.coords.z, BlockID.elixir_plexus);
-		};
-		this.save = function(){
-					return {
-						saturation: this.saturation,
-						purity: this.purity,
-						elixirs: this.elixirs,
-						corruption: this.corruption,
-						coords: this.coords
-					};
-				};
-		this.read = function(data){
-					if (!data){
-						return;
-					}
-					else{
-						var plexus = new ElixirPlexusRegistry.ElixirPlexus(data.coords);
-						for (var date in data){
-							plexus[date] = data[date];
-						}
-					}
-				};
-		Updatable.addUpdatable(this);
-			ElixirPlexusRegistry.plexusAll.push(this);
-		UpdatableSaver.registerPrototype("ELIXIR_PLEXUS", {save: this.save, read: this.read});
-		UpdatableSaver.attachSaverPrototype(this, "ELIXIR_PLEXUS");
+		this.corruption = random(8000, 16000);
+		plexusAll.push(this);
 	},
-	plexusAll: [],
-	getPlexus: function(coords){
-		var plexusAll = ElixirPlexusRegistry.plexusAll;
-		for (var plexus in plexusAll){
-			if (checkObjEqual(plexusAll[plexus].coords, coords)){
-				return plexusAll[plexus];
-			}
-		}
-		return null;
+	
+	update: function(){
+		Particles.addParticle(this.coords.x+0.5, this.coords.y+0.5, this.coords.z+0.5, Native.ParticleType.spell, 0, 0, 0, convertHex(switchArgs("FF0023", "FF00A2", "FF00B1", "FF0089", "FF00D9")));
+	 World.setBlock(this.coords.x, this.coords.y, this.coords.z, BlockID.elixir_plexus);
 	},
-	getNearestPlexus: function(x, y, z){
-		var plexus = ElixirPlexusRegistry.plexusAll[0];
-		var coords = {x: x, y: y, z: z};
-		for (var id in ElixirPlexusRegistry.plexusAll){
-			Game.message(id);
-			if (Entity.getDistanceBetweenCoords(plexusAll[id].coords, coords) < Entity.getDistanceBetweenCoords(plexus.coords, coords)) plexus = plexusAll[id];
+	
+	clear: function(){
+		if (Math.random() < this.corruption / 10000){
+			this.corruption -= random(this.purity);
+			this.elixirs.normal -= random(1 / this.purity);
 		}
-		return plexus;
+	},
+	
+	get: function(x, y, z){
+		Game.message(":)");
+		if (checkObjEqual(this.coords, {x: x, y: y, z: z})) return this;
+	}
+});
+
+function getPlexus(x, y, z){
+	for (var plexus in GameObjectRegistry.getAllByType("plexus")){
+		var plexus1 = GameObjectRegistry.getAllByType("plexus")[plexus];
+		if (plexus1.coords.x==x && plexus1.coords.y==y && plexus1.coords.z==z) return plexus1;
 	}
 }
 
@@ -98,16 +65,16 @@ Block.setBlockShape(BlockID.elixir_plexus, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 1
 
 //debug
 
-Item.registerUseFunctionForID(280, function(coords, item, block){
-	new ElixirPlexusRegistry.ElixirPlexus(coords.relative);
-});
+/*Item.registerUseFunctionForID(280, function(coords, item, block){
+	plexus.deploy(coords.relative.x, coords.relative.y, coords.relative.z);
+});*/
 
 Callback.addCallback("tick", function(chunkX, chunkZ){
-	if (random(200) == 0 && getTimer(40)){
+	if (random(500) == 0 && getTimer(40)){
 		var coords = randomCoordsOfPlayer(8);
 		Game.message(Entity.getDistanceBetweenCoords(coords, Player.getPosition()));
 		if (Entity.getDistanceBetweenCoords(coords, Player.getPosition()) < 32){
-			new ElixirPlexusRegistry.ElixirPlexus(coords);
+			plexus.deploy(coords.x, coords.y, coords.z);
 		}
 	}
 });

@@ -45,7 +45,7 @@ function defineOre(name, proto){
 				data: 0,
 				size: gen.size,
 				ratio: gen.ratio,
-				checkerTile: gen.checker.id,
+				checkerTile: 1,
 				checkerMode: gen.checker.mode
 			});
 		}
@@ -54,6 +54,60 @@ function defineOre(name, proto){
 	var furn = proto.getFurnResult();
 	Recipes.addFurnace(ItemID[name], furn.result, furn.count);
 	Block.registerDropFunction(name, function(coords, id, data, diggingLevel, toolLevel){
-			return [[ItemID[name], 1, 0]];
+			if (diggingLevel > proto.getLevel()) return [[ItemID[name], 1, 0]];
+			return [];
 	}, proto.getLevel());
+}
+
+function switchArgs(){
+	return arguments[random(arguments.length)];
+}
+
+var ToolsModule = {
+
+	CoreAPIMembers: [],
+	
+	pushMethodsOf: function(parent, object){
+		for (let member in object){
+			if (typeof object[member] == "function"){
+				let arg = object[member].toString().match(/\([\w_,\s]{0,}\)/)[0]
+				ToolsModule.CoreAPIMembers.push(parent + "." + member + arg + ";\n")
+				 FileTools.WriteText("coreengine_dump",parent + "." + member + arg + ";\n");
+			}
+			else if (typeof object[member] != "object"){
+				ToolsModule.CoreAPIMembers.push(parent + "." + member + ";\n")
+				 FileTools.WriteText("coreengine_dump",parent + "." + member + ";\n");
+			}
+			else{
+				if (parent.split(".").length <= 4){
+				ToolsModule.pushMethodsOf(parent + "." + member,object[member])
+				}
+			}
+		}
+	},
+	
+	CEDumpCreate: function(){
+		ToolsModule.pushMethodsOf("",GameObjectRegistry)
+		ToolsModule.pushMethodsOf("",new GameObject({}).deploy())
+		let dump;
+		for (let members in ToolsModule.CoreAPIMembers){
+			dump = dump + ToolsModule.CoreAPIMembers[members]
+		}
+		Game.dialogMessage(dump)
+		FileTools.WriteText("coreengine_dump", dump);
+	}
+}
+
+//Callback.addCallback("PostLoaded", function(){ToolsModule.CEDumpCreate()})
+
+function getTileEntityInArea(x, y, z, radius){
+	var coords = {x: x, y: y, z: z}
+	var allTiles = TileEntity.tileEntityList;
+	var allTileInArea = [];
+	for (var tile in allTiles){
+		if (Entity.getDistanceBetweenCoords(coords, {x: allTiles[tile].x, y: allTiles[tile].y, z: allTiles[tile].z}) <= radius){
+			allTileInArea.push(allTiles[tile]);
+		}
+	}
+	return allTileInArea;
 }

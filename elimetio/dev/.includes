@@ -4,9 +4,12 @@ utils.js
 utils/check.js
 utils/machines.js
 utils/money.js
+utils/recipes.js
 block/resources.js
 block/ore.js
+block/hellstone.js
 elixir/collector.js
 elixir/storage.js
 crystal/macerator.js
+elixir/furnace.js
 const.js

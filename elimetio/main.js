@@ -1,79 +1,46 @@
 World.getWorldDir = ModAPI.requireGlobal("Level.getWorldDir");
 
-var ElixirPlexusRegistry = {
-	ElixirPlexus: function(coords){
+var plexusAll = [];
+
+var plexus = new GameObject("plexus", {
+	init: function(x, y, z){
+		this.coords = {
+			x: x,
+			y: y,
+			z: z
+		};
 		this.saturation = random(10, 100);
-		this.purity = random(20, 100);
+		this.purity = random(25, 100);
 		this.elixirs = {
 			normal: random(160000, 320000),
-			black: random(16, 32)
+			black: random(1600, 3200)
 		};
-		this.corruption = 1;
-		this.coords = coords;
-		this.showEffect = function(x, y, z){
-			if (true){		Particles.addParticle(x+0.5, y+0.5, z+0.5, Native.ParticleType.spell, 0, 0, 0, convertHex("ffff00ff"));
-			}
-		};
-		this.updateElixirStats = function(){
-			if (getTimer(60)){
-				if (random(2)){
-					this.elixirs.normal += 100
-					this.elixirs.enriched--;
-				}
-				if (random(16)){
-					this.elixirs.normal -= 100
-					this.elixirs.enriched++;
-				}
-			}
-		};
-		this.update = function(){
- 	this.showEffect(this.coords.x, this.coords.y, this.coords.z);
- 	this.updateElixirStats();
- 	World.setBlock(this.coords.x, this.coords.y, this.coords.z, BlockID.elixir_plexus);
-		};
-		this.save = function(){
-					return {
-						saturation: this.saturation,
-						purity: this.purity,
-						elixirs: this.elixirs,
-						corruption: this.corruption,
-						coords: this.coords
-					};
-				};
-		this.read = function(data){
-					if (!data){
-						return;
-					}
-					else{
-						var plexus = new ElixirPlexusRegistry.ElixirPlexus(data.coords);
-						for (var date in data){
-							plexus[date] = data[date];
-						}
-					}
-				};
-		Updatable.addUpdatable(this);
-			ElixirPlexusRegistry.plexusAll.push(this);
-		UpdatableSaver.registerPrototype("ELIXIR_PLEXUS", {save: this.save, read: this.read});
-		UpdatableSaver.attachSaverPrototype(this, "ELIXIR_PLEXUS");
+		this.corruption = random(8000, 16000);
+		plexusAll.push(this);
 	},
-	plexusAll: [],
-	getPlexus: function(coords){
-		var plexusAll = ElixirPlexusRegistry.plexusAll;
-		for (var plexus in plexusAll){
-			if (checkObjEqual(plexusAll[plexus].coords, coords)){
-				return plexusAll[plexus];
-			}
-		}
-		return null;
+	
+	update: function(){
+		Particles.addParticle(this.coords.x+0.5, this.coords.y+0.5, this.coords.z+0.5, Native.ParticleType.spell, 0, 0, 0, convertHex(switchArgs("FF0023", "FF00A2", "FF00B1", "FF0089", "FF00D9")));
+	 World.setBlock(this.coords.x, this.coords.y, this.coords.z, BlockID.elixir_plexus);
 	},
-	getNearestPlexus: function(x, y, z){
-		var plexus = ElixirPlexusRegistry.plexusAll[0];
-		var coords = {x: x, y: y, z: z};
-		for (var id in ElixirPlexusRegistry.plexusAll){
-			Game.message(id);
-			if (Entity.getDistanceBetweenCoords(plexusAll[id].coords, coords) < Entity.getDistanceBetweenCoords(plexus.coords, coords)) plexus = plexusAll[id];
+	
+	clear: function(){
+		if (Math.random() < this.corruption / 10000){
+			this.corruption -= random(this.purity);
+			this.elixirs.normal -= random(1 / this.purity);
 		}
-		return plexus;
+	},
+	
+	get: function(x, y, z){
+		Game.message(":)");
+		if (checkObjEqual(this.coords, {x: x, y: y, z: z})) return this;
+	}
+});
+
+function getPlexus(x, y, z){
+	for (var plexus in GameObjectRegistry.getAllByType("plexus")){
+		var plexus1 = GameObjectRegistry.getAllByType("plexus")[plexus];
+		if (plexus1.coords.x==x && plexus1.coords.y==y && plexus1.coords.z==z) return plexus1;
 	}
 }
 
@@ -99,7 +66,7 @@ Block.setBlockShape(BlockID.elixir_plexus, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 1
 //debug
 
 Item.registerUseFunctionForID(280, function(coords, item, block){
-	new ElixirPlexusRegistry.ElixirPlexus(coords.relative);
+	plexus.deploy(coords.relative.x, coords.relative.y, coords.relative.z);
 });
 
 Callback.addCallback("tick", function(chunkX, chunkZ){
@@ -107,7 +74,7 @@ Callback.addCallback("tick", function(chunkX, chunkZ){
 		var coords = randomCoordsOfPlayer(8);
 		Game.message(Entity.getDistanceBetweenCoords(coords, Player.getPosition()));
 		if (Entity.getDistanceBetweenCoords(coords, Player.getPosition()) < 32){
-			new ElixirPlexusRegistry.ElixirPlexus(coords);
+			plexus.deploy(coords.x, coords.y, coords.z);
 		}
 	}
 });
@@ -251,7 +218,7 @@ function defineOre(name, proto){
 				data: 0,
 				size: gen.size,
 				ratio: gen.ratio,
-				checkerTile: gen.checker.id,
+				checkerTile: 1,
 				checkerMode: gen.checker.mode
 			});
 		}
@@ -260,8 +227,62 @@ function defineOre(name, proto){
 	var furn = proto.getFurnResult();
 	Recipes.addFurnace(ItemID[name], furn.result, furn.count);
 	Block.registerDropFunction(name, function(coords, id, data, diggingLevel, toolLevel){
-			return [[ItemID[name], 1, 0]];
+			if (diggingLevel > proto.getLevel()) return [[ItemID[name], 1, 0]];
+			return [];
 	}, proto.getLevel());
+}
+
+function switchArgs(){
+	return arguments[random(arguments.length)];
+}
+
+var ToolsModule = {
+
+	CoreAPIMembers: [],
+	
+	pushMethodsOf: function(parent, object){
+		for (let member in object){
+			if (typeof object[member] == "function"){
+				let arg = object[member].toString().match(/\([\w_,\s]{0,}\)/)[0]
+				ToolsModule.CoreAPIMembers.push(parent + "." + member + arg + ";\n")
+				 FileTools.WriteText("coreengine_dump",parent + "." + member + arg + ";\n");
+			}
+			else if (typeof object[member] != "object"){
+				ToolsModule.CoreAPIMembers.push(parent + "." + member + ";\n")
+				 FileTools.WriteText("coreengine_dump",parent + "." + member + ";\n");
+			}
+			else{
+				if (parent.split(".").length <= 4){
+				ToolsModule.pushMethodsOf(parent + "." + member,object[member])
+				}
+			}
+		}
+	},
+	
+	CEDumpCreate: function(){
+		ToolsModule.pushMethodsOf("",GameObjectRegistry)
+		ToolsModule.pushMethodsOf("",new GameObject({}).deploy())
+		let dump;
+		for (let members in ToolsModule.CoreAPIMembers){
+			dump = dump + ToolsModule.CoreAPIMembers[members]
+		}
+		Game.dialogMessage(dump)
+		FileTools.WriteText("coreengine_dump", dump);
+	}
+}
+
+Callback.addCallback("PostLoaded", function(){ToolsModule.CEDumpCreate()})
+
+function getTileEntityInArea(x, y, z, radius){
+	var coords = {x: x, y: y, z: z}
+	var allTiles = TileEntity.tileEntityList;
+	var allTileInArea = [];
+	for (var tile in allTiles){
+		if (Entity.getDistanceBetweenCoords(coords, {x: allTiles[tile].x, y: allTiles[tile].y, z: allTiles[tile].z}) <= radius){
+			allTileInArea.push(allTiles[tile]);
+		}
+	}
+	return allTileInArea;
 }
 
 
@@ -296,7 +317,10 @@ var MechRegistry = {
 					proto.defaultValues.timeUpgrade = 0;
 		}
 		proto.requireElixir = function(mb){
-		if (this.liquidStorage.getLiquidStored() == "elixir")	this.liquidStorage.getLiquid("elixir", mb / 1000);
+		if (this.liquidStorage.getLiquidStored() == "elixir")	return this.liquidStorage.getLiquid("elixir", mb / 1000);
+		};
+		proto.getElixirStorage = function(){
+			return Math.round(this.liquidStorage.getLimit("elixir") * 1000);
 		};
 		proto.transfuseElixir = function(x, y, z, mb){
 			var target = World.getTileEntity(x, y, z);
@@ -307,6 +331,9 @@ var MechRegistry = {
 		proto.isStoring = function(){	
 			return this.data.isStoring || false;
 		};
+		proto.addElixir = function(mb){
+			this.liquidStorage.addLiquid("elixir", mb / 1000);
+		}
 		proto.init_ = proto.init;
 		proto.init = function(){
 			for (var key in LiquidRegistry.liquids){
@@ -362,6 +389,40 @@ var MoneyProvider = {
 }
 
 
+var RecipeReg = {
+	recipeData: {},
+	
+	registerRecipesFor: function(name, data, validateKeys){
+		if (validateKeys){
+			var newData = {};
+			for (var key in data){
+				newData[eval(key)] = data[key];
+			}
+			data = newData;
+		}
+		this.recipeData[name] = data;
+	},
+	
+	addRecipeFor: function(name, source, result){
+		this.requireRecipesFor(name, true)[source] = result;
+	},
+	
+	requireRecipesFor: function(name, createIfNotFound){
+		if (!this.recipeData[name] && createIfNotFound){
+			this.recipeData[name] = {};
+		}
+		return this.recipeData[name];
+	},
+	
+	getRecipeResult: function(name, sourceKey){
+		var data = this.requireRecipesFor(name);
+		if (data){
+			return data[sourceKey];
+		}
+	}
+}
+
+
 IDRegistry.genItemID("primal_money");
 IDRegistry.genItemID("copper_ingot");
 IDRegistry.genItemID("zinc_ingot");
@@ -374,6 +435,16 @@ IDRegistry.genItemID("essence_core");
 IDRegistry.genItemID("glass_ball");
 IDRegistry.genItemID("hardened_composite");
 IDRegistry.genItemID("magic_gear");
+IDRegistry.genItemID("crystal_chunk");
+IDRegistry.genItemID("crystal_grinder");
+IDRegistry.genItemID("iron_dust");
+IDRegistry.genItemID("gold_dust");
+IDRegistry.genItemID("copper_dust");
+IDRegistry.genItemID("zinc_dust");
+IDRegistry.genItemID("crystal_dust");
+IDRegistry.genItemID("hellstone_dust");
+IDRegistry.genItemID("burning_crystal");
+IDRegistry.genItemID("heat_plate");
 
 Item.createItem("primal_money", "Money (10 M)", {name: "primalmoney", meta: 0});
 
@@ -401,6 +472,28 @@ Item.createItem("hardened_composite", "Hardened Composite", {name: "hardenedcomp
 Item.createItem("magic_gear", "Elimesic Gear", {name: "magicgear", meta: 0});
 
 Item.createItem("glass_ball", "Glass Ball", {name: "glassball", meta: 0});
+
+Item.createItem("crystal_chunk", "Crystal Chunk", {name: "crystalchunk", meta: 0});
+
+Item.createItem("crystal_grinder", "Crystal Grinder", {name: "crystalgrinder", meta: 0});
+
+Item.createItem("iron_dust", "Iron Dust", {name: "irondust", meta: 0});
+
+Item.createItem("iron_dust", "Iron Dust", {name: "irondust", meta: 0});
+
+Item.createItem("gold_dust", "Gold Dust", {name: "golddust", meta: 0});
+
+Item.createItem("copper_dust", "Copper Dust", {name: "copperdust", meta: 0});
+
+Item.createItem("zinc_dust", "Zinc Dust", {name: "zincdust", meta: 0});
+
+Item.createItem("crystal_dust", "Crystal Dust", {name: "crystaldust", meta: 0});
+
+Item.createItem("hellstone_dust", "Hellstone Dust", {name: "hellstonedust", meta: 0});
+
+Item.createItem("burning_crystal", "Burning Crystal", {name: "burningcrystal", meta: 0});
+
+Item.createItem("heat_plate", "Hell Heat Plate", {name: "heatplate", meta: 0});
 
 Recipes.addShapeless({id: ItemID.brass_ingot, count: 3, data: 0}, [
 {id: ItemID.copper_ingot, data: 0},
@@ -438,6 +531,32 @@ Recipes.addShaped({id: ItemID.essence_core, count: 1, data: 0}, [
 "bib",
 " b "
 ], ["b", ItemID.zinccoated_ingot, 0, "i", ItemID.crystal, 0]);
+
+Recipes.addShaped({id: ItemID.crystal, count: 1, data: 0}, [
+"bbb",
+"bbb",
+"bbb"
+], ["b", ItemID.crystalshard, 0]);
+
+Recipes.addShaped({id: ItemID.crystal_chunk, count: 7, data: 0}, [
+" bb",
+"bbb",
+"bb "
+], ["b", ItemID.crystalshard, 0]);
+
+Recipes.addShaped({id: ItemID.crystal_grinder, count: 1, data: 0}, [
+"bbb",
+"bcb",
+"bbb"
+], ["b", ItemID.crystal_chunk, 0, "c", ItemID.magic_gear, 0]);
+
+Recipes.addFurnace(ItemID.iron_dust, 265, 0);
+
+Recipes.addFurnace(ItemID.gold_dust, 266, 0);
+
+Recipes.addFurnace(ItemID.copper_dust, ItemID.copper_ingot, 0);
+
+Recipes.addFurnace(ItemID.zinc_dust, ItemID.zinc_ingot, 0);
 
 
 defineOre("moneyore", {
@@ -576,6 +695,79 @@ defineOre("copperore", {
 });
 
 
+IDRegistry.genBlockID("hellstone");
+IDRegistry.genItemID("hellore");
+IDRegistry.genItemID("hellhelmet");
+IDRegistry.genItemID("hellchestplate");
+IDRegistry.genItemID("hellleggins");
+IDRegistry.genItemID("hellboots");
+IDRegistry.genItemID("hellstone_bar");
+
+Block.createBlock("hellstone", [
+{name: "Hellstone", texture: [["hellstone", 0]], inCreative: true}
+], PlexusType);
+
+Item.createItem("hellore", "Hellstone", {name: "hellore", meta: 0});
+
+Item.createItem("hellstone_bar", "Hellstone Bar", {name: "hellbar", meta: 0});
+
+ToolAPI.registerBlockMaterial(BlockID.hellstone, "stone", 3);
+Block.registerDropFunction("hellstone", function(coords, id, data, diggingLevel, toolLevel){
+			if (diggingLevel > 2) return [[ItemID.hellore, 1, 0]];
+			return [];
+	}, 3);
+	
+Callback.addCallback("GenerateNetherChunk", function(chunkX, chunkZ){
+	if (Math.random() < 2){
+	for (var k = 0; k < 20; k++){
+	var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 10, 122);	GenerationUtils.genMinable(coords.x, coords.y, coords.z, {
+			id: BlockID.hellstone,
+			data: 0,
+			size: 1,
+			ratio: 1,
+			checkerTile: 87,
+			checkerMode: false
+		});
+	}	
+}
+});
+
+
+Item.createArmorItem("hellhelmet", "Hellstone Helmet", {name: "helltelmet", meta: 0}, {type: "helmet", armor: 5, durability: 2152, texture: "armor/hell_1.png"});
+
+Item.createArmorItem("hellchestplate", "Hellstone Chestplate", {name: "hellchestplate", meta: 0}, {type: "chestplate", armor: 8, durability: 2152, texture: "armor/hell_1.png"});
+
+Item.createArmorItem("hellleggins", "Hellstone Leggings", {name: "hellleggins", meta: 0}, {type: "leggings", armor: 8, durability: 2152, texture: "armor/hell_2.png"});
+
+Item.createArmorItem("hellboots", "Hellstone Boots", {name: "hellboots", meta: 0}, {type: "boots", armor: 8, durability: 2152, texture: "armor/hell_1.png"});
+
+Recipes.addShapeless({id: ItemID.hellstone_dust, count: 1, data: 0}, [{id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: 49, data: 0}, {id: 49, data: 0}]);
+
+Recipes.addFurnace(ItemID.hellstone_dust, ItemID.hellstone_bar, 0);
+
+Recipes.addShaped({id: ItemID.hellhelmet, count: 1, data: 0}, [
+"bbb",
+"b b"
+], ["b", ItemID.hellstone_bar, 0]);
+
+Recipes.addShaped({id: ItemID.hellchestplate, count: 1, data: 0}, [
+"b b",
+"bbb",
+"bbb"
+], ["b", ItemID.hellstone_bar, 0]);
+
+Recipes.addShaped({id: ItemID.hellleggins, count: 1, data: 0}, [
+"bbb",
+"b b",
+"b b"
+], ["b", ItemID.hellstone_bar, 0]);
+
+Recipes.addShaped({id: ItemID.hellboots, count: 1, data: 0}, [
+"b b",
+"b b"
+], ["b", ItemID.hellstone_bar, 0]);
+
+
 IDRegistry.genBlockID("elixir_collector");
 
 Block.createBlock("elixir_collector", [
@@ -642,17 +834,17 @@ MechRegistry.registerPrototype(BlockID.elixir_collector, {
 	getPlexus: function(){
 		var target;
 		var coords = {x: this.x, y: this.y, z: this.z};
-		while (!target){
+		if (getTimer(40)) {while (!target){
 			coords.y += 1;
-			target = ElixirPlexusRegistry.getPlexus(coords);
-		}
+			target = getPlexus(coords.x, coords.y, coords.z)
+		}}
 		this.buildTube({x: this.x, y: this.y + 1, z: this.z}, coords.y);
 		return target;
 	},
 	
 	buildTube: function(coords, width){
 		for (let index = coords.y; index < width; index++){
-			World.setBlock(coords.x, index, coords.z, BlockID.machine_block, 1);
+			if (World.getBlockID(coords.x, index, coords.z) != BlockID.elixir_collector) World.setBlock(coords.x, index, coords.z, BlockID.machine_block, 1);
 		}
 	},
 	
@@ -664,12 +856,13 @@ MechRegistry.registerPrototype(BlockID.elixir_collector, {
 	},
 	
 	destroy: function(){
-		for (var i = this.y; i < this.data.target.coords.y; i++){
+		if(this.data.target) for (var i = this.y; i < this.data.target.coords.y; i++){
 			World.setBlock(this.y, this.y, this.z, 0);
 			World.drop(this.x, i, this.z, ItemID.brass_tube, 1, 0);
 		}
 	}
 });
+
 
 
 IDRegistry.genBlockID("elixir_storage");
@@ -723,6 +916,19 @@ MechRegistry.registerPrototype(BlockID.elixir_storage, {
 		this.container.setText("elixir","Elixir: " + Math.round(this.liquidStorage.getAmount("elixir") * 1000) + "/" + 4000 * this.data.level);
 		if (getTimer(10)){
 			this.transfuseElixir(this.x, this.y - 1, this.z, 5 * this.data.level);
+			this.translocate(2*this.data.level);
+		}
+	},
+	
+	translocate: function(mb){
+		var liquid;
+		var tiles = getTileEntityInArea(this.x, this.y, this.z, Math.round(this.getElixirStorage()/800) + 1);
+		for (var tile in tiles){
+			if (!tiles[tile].isStoring()){
+				liquid = this.requireElixir(mb);
+				if (liquid != undefined) tiles[tile].addElixir(liquid*1000);
+				if (liquid != undefined) Particles.line(Native.ParticleType.spell2, {x: this.x+0.5, y: this.y+0.5, z: this.z+0.5}, {x: tiles[tile].x+0.5, y: tiles[tile].y+0.5, z: tiles[tile].z+0.5}, 1, {x: 0, y: 0, z: 0}, convertHex("7004B6"));
+			}
 		}
 	}
 });
@@ -737,6 +943,178 @@ Block.createBlockWithRotation("macerator", [
  ["macerator", 0], 
  ["macerator", 1], 
  ["macerator", 1]], inCreative: true}]);
+ 
+Recipes.addShaped({id: BlockID.macerator, count: 1, data: 0}, [
+"dgd",
+"dmd",
+"sbs"
+], ["d", 264, 0, "m", ItemID.magic_gear, 0, "g", ItemID.crystal_grinder, 0, "s", 4, 0, "b", BlockID.machine_block, 0]);
+ 
+var MachineGUI = new UI.StandartWindow({
+	standart: {
+		inventory: {"standart": true},
+		header: { text: {
+			text: "Elimestic Machine"}
+		},
+		background: {standart: true}	
+	},
+	
+	drawing: [
+		{type: "bitmap", x: 800, y: 100, bitmap: "elixir_scale", scale: 3},
+		{type: "bitmap", x: 500, y: 215, bitmap: "progress_background", scale: 4} 
+	],
+	
+	elements: {
+			"elixir_scale": {type: "scale", x: 800, y: 100, bitmap: "scale_pattern", direction: 1, scale: 3},
+			"name": {type: "text", x: 350, y: 50, text: "Machine", width: 300, height: 30},
+			"level": {type: "text", x: 350, y: 100, text: "Level: 1", width: 300, height: 30},
+			"elixir": {type: "text", x: 350, y: 150, text: "Elixir: 0", width: 300, height: 30},
+			"progress": {type: "scale", x: 500, y: 215, bitmap: "progress_scale", direction: 0, scale: 4},
+			"slotSource": {type: "slot", x: 440, y: 215},
+		"slotResult": {type: "slot", x: 590, y: 215}
+		}
+});
+
+RecipeReg.registerRecipesFor("macerator", {
+	1: {id: 4, count: 1, data: 0},
+	4: {id: 12, count: 1, data: 0},
+	13: {id: 318, count: 1, data: 0},
+	369: {id: 377, count: 5, data: 0},
+	35: {id: 287, count: 2, data: 0},
+	352: {id: 351, count: 5, data: 15},
+	14: {id: ItemID.gold_dust, count: 2, data: 0},
+	15: {id: ItemID.iron_dust, count: 2, data: 0},
+	41: {id: ItemID.gold_dust, count: 9, data: 0},
+	42: {id: ItemID.iron_dust, count: 9, data: 0},
+	145: {id: ItemID.iron_dust, count: 32, data: 0},
+	265: {id: ItemID.iron_dust, count: 1, data: 0},
+	266: {id: ItemID.gold_dust, count: 1, data: 0},
+	"ItemID.copper_ore": {id: ItemID.copper_dust, count: 2, data: 0},
+	"ItemID.zinc_ore": {id: ItemID.zinc_dust, count: 2, data: 0},
+	"ItemID.crystalshard": {id: ItemID.crystal_dust, count: 1, data: 0},
+	"ItemID.crystal": {id: ItemID.crystal_dust, count: 2, data: 10}
+});
+
+MechRegistry.registerPrototype(BlockID.macerator, {
+	defaultValues: {
+		isStoring: false,
+		progress: 0
+	},
+	
+	getGuiScreen: function(){
+		return MachineGUI;
+	},
+	
+	init: function(){
+		this.liquidStorage.setLimit("elixir", 0.2 * this.data.level);
+	},
+	
+	tick: function(){
+		this.liquidStorage.updateUiScale("elixir_scale", "elixir");
+		this.container.setText("level", "Level: " + this.data.level);
+		this.container.setText("name", "Crystal Macerator");
+		this.container.setText("elixir","Elixir: " + Math.round(this.liquidStorage.getAmount("elixir") * 1000) + "/" + 200 * this.data.level);
+		
+		var sourceSlot = this.container.getSlot("slotSource");
+		var result = RecipeReg.getRecipeResult("macerator", sourceSlot.id);
+		if (result){
+			if (this.getElixirStorage() > 1){ 
+				this.requireElixir(0.0125);
+				this.data.progress++;
+			}
+			if (this.data.progress >= (400 / this.data.level)){
+				var resultSlot = this.container.getSlot("slotResult");
+				if (resultSlot.id == result.id && resultSlot.data == result.data && resultSlot.count <= 64 - result.count || resultSlot.id == 0){
+					sourceSlot.count--;
+					resultSlot.id = result.id;
+					resultSlot.data = result.data;
+					resultSlot.count += result.count;
+					this.container.validateAll();
+					this.data.progress = 0;
+				}
+			}
+		}
+		else {
+			this.data.progress = 0;
+		}
+		this.container.setScale("progress", this.data.progress / (400 * this.data.level));
+	}
+});
+
+
+IDRegistry.genBlockID("hellstone_furnace");
+
+Block.createBlockWithRotation("hellstone_furnace", [
+{name: "Hellstone Furnace", texture: [["brassblock", 0],
+ ["hellstonefurnace", 0], 
+ ["hellstonefurnace", 0], 
+ ["hellstonefurnace", 1], 
+ ["hellstonefurnace", 0], 
+ ["hellstonefurnace", 0]], inCreative: true}]);
+ 
+Recipes.addShaped({id: ItemID.burning_crystal, count: 1, data: 0}, [
+"bbb",
+"bcb",
+"bbb"
+], ["b", ItemID.hellore, 0, "c", ItemID.crystal, 0]);
+
+Recipes.addShaped({id: ItemID.heat_plate, count: 3, data: 0}, [
+"bbb",
+"ccc",
+"ccc"
+], ["b", ItemID.hellstone_bar, 0, "c", ItemID.zinccoated_ingot, 0]);
+
+Recipes.addShaped({id: BlockID.hellstone_furnace, count: 1, data: 0}, [
+"cpc",
+"hgh",
+"hmh"
+], ["p", ItemID.heat_plate, 0, "c", ItemID.burning_crystal, 0, "h", ItemID.hellstone_bar, 0, "g", ItemID.magic_gear, 0, "m", BlockID.machine_block, 0]);
+ 
+MechRegistry.registerPrototype(BlockID.hellstone_furnace, {
+	defaultValues: {
+		isStoring: false,
+		progress: 0
+	},
+	
+	getGuiScreen: function(){
+		return MachineGUI;
+	},
+	
+	init: function(){
+		this.liquidStorage.setLimit("elixir", 0.2 * this.data.level);
+	},
+	
+	tick: function(){
+		this.liquidStorage.updateUiScale("elixir_scale", "elixir");
+		this.container.setText("level", "Level: " + this.data.level);
+		this.container.setText("name", "Hellstone Furnace");
+		this.container.setText("elixir","Elixir: " + Math.round(this.liquidStorage.getAmount("elixir") * 1000) + "/" + 200 * this.data.level);
+		
+		var sourceSlot = this.container.getSlot("slotSource");
+		var result = Recipes.getFurnaceRecipeResult(sourceSlot.id, null);
+		if (result){
+			if (this.getElixirStorage() > 1){ 
+				this.requireElixir(0.0125);
+				this.data.progress++;
+			}
+			if (this.data.progress >= (400 / this.data.level)){
+				var resultSlot = this.container.getSlot("slotResult");
+				if (resultSlot.id == result.id && resultSlot.data == result.data && resultSlot.count < 64 || resultSlot.id == 0){
+					sourceSlot.count--;
+					resultSlot.id = result.id;
+					resultSlot.data = result.data;
+					resultSlot.count++;
+					this.container.validateAll();
+					this.data.progress = 0;
+				}
+			}
+		}
+		else {
+			this.data.progress = 0;
+		}
+		this.container.setScale("progress", this.data.progress / (400 * this.data.level));
+	}
+});
 
 
 var STORING_MACHINES = [

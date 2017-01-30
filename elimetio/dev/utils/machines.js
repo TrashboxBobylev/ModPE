@@ -12,7 +12,10 @@ var MechRegistry = {
 					proto.defaultValues.timeUpgrade = 0;
 		}
 		proto.requireElixir = function(mb){
-		if (this.liquidStorage.getLiquidStored() == "elixir")	this.liquidStorage.getLiquid("elixir", mb / 1000);
+		if (this.liquidStorage.getLiquidStored() == "elixir")	return this.liquidStorage.getLiquid("elixir", mb / 1000);
+		};
+		proto.getElixirStorage = function(){
+			return Math.round(this.liquidStorage.getLimit("elixir") * 1000);
 		};
 		proto.transfuseElixir = function(x, y, z, mb){
 			var target = World.getTileEntity(x, y, z);
@@ -23,6 +26,9 @@ var MechRegistry = {
 		proto.isStoring = function(){	
 			return this.data.isStoring || false;
 		};
+		proto.addElixir = function(mb){
+			this.liquidStorage.addLiquid("elixir", mb / 1000);
+		}
 		proto.init_ = proto.init;
 		proto.init = function(){
 			for (var key in LiquidRegistry.liquids){

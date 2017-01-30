@@ -49,6 +49,19 @@ MechRegistry.registerPrototype(BlockID.elixir_storage, {
 		this.container.setText("elixir","Elixir: " + Math.round(this.liquidStorage.getAmount("elixir") * 1000) + "/" + 4000 * this.data.level);
 		if (getTimer(10)){
 			this.transfuseElixir(this.x, this.y - 1, this.z, 5 * this.data.level);
+			this.translocate(2*this.data.level);
+		}
+	},
+	
+	translocate: function(mb){
+		var liquid;
+		var tiles = getTileEntityInArea(this.x, this.y, this.z, Math.round(this.getElixirStorage()/800) + 1);
+		for (var tile in tiles){
+			if (!tiles[tile].isStoring()){
+				liquid = this.requireElixir(mb);
+				if (liquid != undefined) tiles[tile].addElixir(liquid*1000);
+				if (liquid != undefined) Particles.line(Native.ParticleType.spell2, {x: this.x+0.5, y: this.y+0.5, z: this.z+0.5}, {x: tiles[tile].x+0.5, y: tiles[tile].y+0.5, z: tiles[tile].z+0.5}, 1, {x: 0, y: 0, z: 0}, convertHex("7004B6"));
+			}
 		}
 	}
 });
