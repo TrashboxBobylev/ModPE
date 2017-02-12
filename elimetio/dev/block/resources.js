@@ -20,6 +20,7 @@ IDRegistry.genItemID("crystal_dust");
 IDRegistry.genItemID("hellstone_dust");
 IDRegistry.genItemID("burning_crystal");
 IDRegistry.genItemID("heat_plate");
+IDRegistry.genItemID("chrono_kernel");
 
 Item.createItem("primal_money", "Money (10 M)", {name: "primalmoney", meta: 0});
 
@@ -70,6 +71,8 @@ Item.createItem("burning_crystal", "Burning Crystal", {name: "burningcrystal", m
 
 Item.createItem("heat_plate", "Hell Heat Plate", {name: "heatplate", meta: 0});
 
+Item.createItem("chrono_kernel", "Chronokernel", {name: "chronokernel", meta: 0});
+
 Recipes.addShapeless({id: ItemID.brass_ingot, count: 3, data: 0}, [
 {id: ItemID.copper_ingot, data: 0},
 {id: ItemID.copper_ingot, data: 0},
@@ -112,6 +115,24 @@ Recipes.addShaped({id: ItemID.crystal, count: 1, data: 0}, [
 "bbb",
 "bbb"
 ], ["b", ItemID.crystalshard, 0]);
+
+Recipes.addShaped({id: ItemID.glass_ball, count: 4, data: 0}, [
+"bbb",
+"b b",
+"bbb"
+], ["b", 20, 0]);
+
+Recipes.addShaped({id: ItemID.hardened_composite, count: 3, data: 0}, [
+"bbb",
+"ddd",
+"ccc"
+], ["b", ItemID.brass_ingot, 0, "d", ItemID.zinccoated_ingot, 0, "c", ItemID.copper_ingot, 0]);
+
+Recipes.addShaped({id: ItemID.chrono_kernel, count: 3, data: 0}, [
+"hbh",
+"b b",
+"hbh"
+], ["b", ItemID.magic_gear, 0, "h", ItemID.hardened_composite, 0]);
 
 Recipes.addShaped({id: ItemID.crystal_chunk, count: 7, data: 0}, [
 " bb",

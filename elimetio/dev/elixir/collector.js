@@ -27,7 +27,7 @@ var CollectorGui = new UI.StandartWindow({
 			"elixir_scale": {type: "scale", x: 800, y: 100, bitmap: "scale_pattern", direction: 1, scale: 3},
 			"level": {type: "text", x: 500, y: 100, text: "Level: 1", width: 300, height: 30},
 			"elixir": {type: "text", x: 500, y: 150, text: "Elixir: 0", width: 300, height: 30},
-			"tubes": {type: "slot", x: 500, y: 200}
+			"slotSource": {type: "slot", x: 500, y: 200}
 		}
 	});
 

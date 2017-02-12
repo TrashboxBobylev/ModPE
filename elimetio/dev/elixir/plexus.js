@@ -70,7 +70,7 @@ Block.setBlockShape(BlockID.elixir_plexus, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 1
 });*/
 
 Callback.addCallback("tick", function(chunkX, chunkZ){
-	if (random(500) == 0 && getTimer(40)){
+	if (random(100) == 0 && getTimer(40)){
 		var coords = randomCoordsOfPlayer(8);
 		Game.message(Entity.getDistanceBetweenCoords(coords, Player.getPosition()));
 		if (Entity.getDistanceBetweenCoords(coords, Player.getPosition()) < 32){

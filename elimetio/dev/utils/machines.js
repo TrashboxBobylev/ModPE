@@ -52,6 +52,16 @@ var MechRegistry = {
 			if (this.data.timeUpgrade = 0){
 				
 			}
+			if (getTimer(20) && this.data.output){
+				var result = this.container.getSlot("slotResult");
+				result.count--;
+				var source = World.getTileEntity(this.data.output.x, this.data.output.y, this.data.output.z).container.getSlot("slotSource"); 
+				if (result.id != 0){
+				source.id = result.id;
+				source.count++;
+				source.data = result.data;}
+				this.container.validateAll();
+			}
 		};
 		TileEntity.registerPrototype(id, proto);
 	}

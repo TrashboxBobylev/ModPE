@@ -65,12 +65,12 @@ Block.setBlockShape(BlockID.elixir_plexus, {x: 0, y: 0, z: 0}, {x: 0, y: 0, z: 1
 
 //debug
 
-Item.registerUseFunctionForID(280, function(coords, item, block){
+/*Item.registerUseFunctionForID(280, function(coords, item, block){
 	plexus.deploy(coords.relative.x, coords.relative.y, coords.relative.z);
-});
+});*/
 
 Callback.addCallback("tick", function(chunkX, chunkZ){
-	if (random(200) == 0 && getTimer(40)){
+	if (random(100) == 0 && getTimer(40)){
 		var coords = randomCoordsOfPlayer(8);
 		Game.message(Entity.getDistanceBetweenCoords(coords, Player.getPosition()));
 		if (Entity.getDistanceBetweenCoords(coords, Player.getPosition()) < 32){
@@ -173,6 +173,28 @@ Callback.addCallback("GenerateChunkUnderground", function(chunkX, chunkZ){
 
 var MINECRAFT_HOUR_TIME = 1000;
 
+var BASE_TOOL_MATERIAL = {
+	level: 4,
+	damage: 5,
+	durability: 3400,
+	efficiency: 14
+}
+
+ToolAPI.registerTool_ = ToolAPI.registerTool;
+
+ToolAPI.registerTool = function(id, material, blocks, prototype){
+	if (prototype.tick) {
+	 Callback.addCallback("tick", function(){
+			if (Player.getCarriedItem().id == id) prototype.tick();
+	 });
+	};
+	ToolAPI.registerTool_(id, material, blocks, prototype);
+}
+
+function pass(){
+	var d = 0;
+}
+
 function random() {
 	switch (arguments.length){
 	case 1: 
@@ -271,7 +293,7 @@ var ToolsModule = {
 	}
 }
 
-Callback.addCallback("PostLoaded", function(){ToolsModule.CEDumpCreate()})
+//Callback.addCallback("PostLoaded", function(){ToolsModule.CEDumpCreate()})
 
 function getTileEntityInArea(x, y, z, radius){
 	var coords = {x: x, y: y, z: z}
@@ -284,6 +306,28 @@ function getTileEntityInArea(x, y, z, radius){
 	}
 	return allTileInArea;
 }
+
+function clone(obj){
+	var clone_obj = {};
+	for (var member in obj){
+		if (typeof obj != "object"){
+			clone_obj[member] = obj[member];
+		}
+		else{
+			clone_obj[member] = clone(obj[member]);
+		}
+	}
+	return clone_obj;
+}
+
+function pass(){
+	var a;
+}
+
+var connectstaff_mode = {
+	name: "input"
+};
+
 
 
 var CheckRegistry = {
@@ -356,6 +400,16 @@ var MechRegistry = {
 			}
 			if (this.data.timeUpgrade = 0){
 				
+			}
+			if (getTimer(20) && this.data.output){
+				var result = this.container.getSlot("slotResult");
+				result.count--;
+				var source = World.getTileEntity(this.data.output.x, this.data.output.y, this.data.output.z).container.getSlot("slotSource"); 
+				if (result.id != 0){
+				source.id = result.id;
+				source.count++;
+				source.data = result.data;}
+				this.container.validateAll();
 			}
 		};
 		TileEntity.registerPrototype(id, proto);
@@ -445,6 +499,7 @@ IDRegistry.genItemID("crystal_dust");
 IDRegistry.genItemID("hellstone_dust");
 IDRegistry.genItemID("burning_crystal");
 IDRegistry.genItemID("heat_plate");
+IDRegistry.genItemID("chrono_kernel");
 
 Item.createItem("primal_money", "Money (10 M)", {name: "primalmoney", meta: 0});
 
@@ -495,6 +550,8 @@ Item.createItem("burning_crystal", "Burning Crystal", {name: "burningcrystal", m
 
 Item.createItem("heat_plate", "Hell Heat Plate", {name: "heatplate", meta: 0});
 
+Item.createItem("chrono_kernel", "Chronokernel", {name: "chronokernel", meta: 0});
+
 Recipes.addShapeless({id: ItemID.brass_ingot, count: 3, data: 0}, [
 {id: ItemID.copper_ingot, data: 0},
 {id: ItemID.copper_ingot, data: 0},
@@ -537,6 +594,24 @@ Recipes.addShaped({id: ItemID.crystal, count: 1, data: 0}, [
 "bbb",
 "bbb"
 ], ["b", ItemID.crystalshard, 0]);
+
+Recipes.addShaped({id: ItemID.glass_ball, count: 4, data: 0}, [
+"bbb",
+"b b",
+"bbb"
+], ["b", 20, 0]);
+
+Recipes.addShaped({id: ItemID.hardened_composite, count: 3, data: 0}, [
+"bbb",
+"ddd",
+"ccc"
+], ["b", ItemID.brass_ingot, 0, "d", ItemID.zinccoated_ingot, 0, "c", ItemID.copper_ingot, 0]);
+
+Recipes.addShaped({id: ItemID.chrono_kernel, count: 3, data: 0}, [
+"hbh",
+"b b",
+"hbh"
+], ["b", ItemID.magic_gear, 0, "h", ItemID.hardened_composite, 0]);
 
 Recipes.addShaped({id: ItemID.crystal_chunk, count: 7, data: 0}, [
 " bb",
@@ -702,6 +777,10 @@ IDRegistry.genItemID("hellchestplate");
 IDRegistry.genItemID("hellleggins");
 IDRegistry.genItemID("hellboots");
 IDRegistry.genItemID("hellstone_bar");
+IDRegistry.genItemID("hell_pickaxe");
+IDRegistry.genItemID("hell_shovel");
+IDRegistry.genItemID("hell_axe");
+IDRegistry.genItemID("hell_sword");
 
 Block.createBlock("hellstone", [
 {name: "Hellstone", texture: [["hellstone", 0]], inCreative: true}
@@ -719,7 +798,7 @@ Block.registerDropFunction("hellstone", function(coords, id, data, diggingLevel,
 	
 Callback.addCallback("GenerateNetherChunk", function(chunkX, chunkZ){
 	if (Math.random() < 2){
-	for (var k = 0; k < 20; k++){
+	for (var k = 0; k < 7; k++){
 	var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 10, 122);	GenerationUtils.genMinable(coords.x, coords.y, coords.z, {
 			id: BlockID.hellstone,
 			data: 0,
@@ -740,6 +819,14 @@ Item.createArmorItem("hellchestplate", "Hellstone Chestplate", {name: "hellchest
 Item.createArmorItem("hellleggins", "Hellstone Leggings", {name: "hellleggins", meta: 0}, {type: "leggings", armor: 8, durability: 2152, texture: "armor/hell_2.png"});
 
 Item.createArmorItem("hellboots", "Hellstone Boots", {name: "hellboots", meta: 0}, {type: "boots", armor: 8, durability: 2152, texture: "armor/hell_1.png"});
+
+Item.createItem("hell_pickaxe", "Hellstone Pickaxe", {name: "hellpickaxe", meta: 0}, {stack: 1});
+
+Item.createItem("hell_shovel", "Hellstone Shovel", {name: "hellshovel", meta: 0}, {stack: 1});
+
+Item.createItem("hell_axe", "Hellstone Axe", {name: "hellaxe", meta: 0}, {stack: 1});
+
+Item.createItem("hell_sword", "Hellstone Sword", {name: "hellsword", meta: 0}, {stack: 1});
 
 Recipes.addShapeless({id: ItemID.hellstone_dust, count: 1, data: 0}, [{id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: ItemID.hellore, data: 0}, {id: 49, data: 0}, {id: 49, data: 0}]);
 
@@ -766,6 +853,125 @@ Recipes.addShaped({id: ItemID.hellboots, count: 1, data: 0}, [
 "b b",
 "b b"
 ], ["b", ItemID.hellstone_bar, 0]);
+
+Recipes.addShaped({id: ItemID.hell_pickaxe, count: 1, data: 0}, [
+"bbb",
+" b ",
+" b "
+], ["b", ItemID.hellstone_bar, 0]);
+
+Recipes.addShaped({id: ItemID.hell_shovel, count: 1, data: 0}, [
+"b",
+"b",
+"b"
+], ["b", ItemID.hellstone_bar, 0]);
+
+Recipes.addShaped({id: ItemID.hell_axe, count: 1, data: 0}, [
+"bb",
+"bb",
+" b"
+], ["b", ItemID.hellstone_bar, 0]);
+
+Recipes.addShaped({id: ItemID.hell_axe, count: 1, data: 0}, [
+"bb",
+"bb",
+"b "
+], ["b", ItemID.hellstone_bar, 0]);
+
+Recipes.addShaped({id: ItemID.hell_sword, count: 1, data: 0}, [
+"b",
+"b",
+"b "
+], ["b", ItemID.hellstone_bar, 0]);
+
+
+IDRegistry.genItemID("chloropfyte_ore");
+IDRegistry.genBlockID("chloropfyte");
+IDRegistry.genItemID("chlorophyte_crystal");
+IDRegistry.genItemID("chloro_pickaxe");
+IDRegistry.genItemID("chloro_axe");
+IDRegistry.genItemID("chloro_shovel");
+IDRegistry.genItemID("chloro_sword");
+IDRegistry.genItemID("chloro_plate");
+IDRegistry.genItemID("chloro_saw");
+
+Block.createBlock("chloropfyte", [{name: "Chlorophyte Ore", texture: [["chlorophyteore", 0]], inCreative: true}]);
+
+Item.createItem("chloropfyte_ore", "Chlorophyte Ore", {name: "leaveshard"});
+
+Item.createItem("chlorophyte_crystal", "Planted Crystal", {name: "plantedcrystal"});
+
+ToolAPI.registerBlockMaterial(BlockID.chloropfyte, "stone", 3);
+Block.registerDropFunction("chloropfyte", function(coords, id, data, diggingLevel, toolLevel){
+			if (diggingLevel > 2) return [[ItemID.chloropfyte_ore, 1, 0]];
+			return [];
+	}, 3);
+	
+Callback.addCallback("GenerateChunk", function(chunkX, chunkZ){
+	if (Math.random() < 2){
+	for (var k = 0; k < 3; k++){
+	var coords = GenerationUtils.randomCoords(chunkX, chunkZ, 10, 120);	
+	if (World.getBiome(coords.x, coords.z) == 21) GenerationUtils.genMinable(coords.x, coords.y, coords.z, {
+			id: BlockID.chlorophyte,
+			data: 0,
+			size: 1,
+			ratio: 1,
+			checkerTile: 1,
+			checkerMode: false
+		});
+	}	
+}
+});
+
+Recipes.addFurnace(ItemID.chloropfyte_ore, ItemID.chlorophyte_crystal, 0);
+
+Item.createItem("chloro_pickaxe", "Chlorophyte Pickaxe", {name: "chloropickaxe"}, {stack: 1});
+
+Item.createItem("chloro_axe", "Chlorophyte Axe", {name: "chloroaxe"}, {stack: 1});
+
+Item.createItem("chloro_shovel", "Chlorophyte Shovel", {name: "chloroshovel"}, {stack: 1});
+
+Item.createItem("chloro_sword", "Chlorophyte Sword", {name: "chlorosword"}, {stack: 1});
+
+Item.createItem("chloro_plate", "Chlorophyte Grownted Plate", {name: "chloroplate"});
+
+Item.createItem("chloro_saw", "Chlorophyte Saw", {name: "saw"});
+
+Recipes.addShaped({id: ItemID.chloro_plate, count: 3, data: 0}, [
+	"ccc",
+	"hhh",
+	"ccc"
+], ["c", ItemID.chlorophyte_crystal, 0, "h", ItemID.hardened_composite, 0]);
+
+Recipes.addShaped({id: ItemID.chloro_sword, count: 1, data: 0}, [
+	"c",
+	"c",
+	"c"
+], ["c", ItemID.chlorophyte_crystal]);
+
+Recipes.addShaped({id: ItemID.chloro_pickaxe, count: 1, data: 0}, [
+	"ccc",
+	" c ",
+	" c "
+], ["c", ItemID.chlorophyte_crystal, 0]);
+
+Recipes.addShaped({id: ItemID.chloro_shovel, count: 1, data: 0}, [
+	"c",
+	"c",
+	"c"
+], ["c", ItemID.chlorophyte_crystal, 0]);
+
+Recipes.addShaped({id: ItemID.chloro_axe, count: 1, data: 0}, [
+	"cc",
+	"cc",
+	"c"
+], ["c", ItemID.chlorophyte_crystal, 0]);
+
+Recipes.addShaped({id: ItemID.chloro_saw, count: 2, data: 0}, [
+	"ccc",
+	"c c",
+	"ccc"
+], ["c", ItemID.chlorophyte_crystal, 0]);
 
 
 IDRegistry.genBlockID("elixir_collector");
@@ -797,7 +1003,7 @@ var CollectorGui = new UI.StandartWindow({
 			"elixir_scale": {type: "scale", x: 800, y: 100, bitmap: "scale_pattern", direction: 1, scale: 3},
 			"level": {type: "text", x: 500, y: 100, text: "Level: 1", width: 300, height: 30},
 			"elixir": {type: "text", x: 500, y: 150, text: "Elixir: 0", width: 300, height: 30},
-			"tubes": {type: "slot", x: 500, y: 200}
+			"slotSource": {type: "slot", x: 500, y: 200}
 		}
 	});
 
@@ -1117,9 +1323,251 @@ MechRegistry.registerPrototype(BlockID.hellstone_furnace, {
 });
 
 
+IDRegistry.genBlockID("chloro_sawmill");
+
+Block.createBlockWithRotation("chloro_sawmill", [
+{name: "Chlorophyte Sawmill", texture: [
+	["brassblock", 0],
+	["sawmill", 2],
+	["sawmill", 1],
+	["sawmill", 0],
+	["sawmill", 1],
+	["sawmill", 1]
+], inCreative: true}]);
+
+Recipes.addShaped({id: BlockID.chloro_sawmill, count: 1, data: 0}, [
+	"psp",
+	"pgp",
+	"ama"
+], ["p", ItemID.chloro_plate, 0, "s", ItemID.chloro_saw, 0, "g", ItemID.magic_gear, 0, "a", 6, -1, "m", BlockID.machine_block, 0]);
+
+RecipeReg.registerRecipesFor("sawmill", {
+	17: {id: 5, count: 6, data: 0},
+	5: {id: 280, count: 16, data: 0}
+});
+
+MechRegistry.registerPrototype(BlockID.chloro_sawmill, {
+	defaultValues: {
+		isStoring: false,
+		progress: 0
+	},
+	
+	getGuiScreen: function(){
+		return MachineGUI;
+	},
+	
+	init: function(){
+		this.liquidStorage.setLimit("elixir", 0.2 * this.data.level);
+	},
+	
+	tick: function(){
+		this.liquidStorage.updateUiScale("elixir_scale", "elixir");
+		this.container.setText("level", "Level: " + this.data.level);
+		this.container.setText("name", "Chlorophyte Sawmill");
+		this.container.setText("elixir","Elixir: " + Math.round(this.liquidStorage.getAmount("elixir") * 1000) + "/" + 200 * this.data.level);
+		
+		var sourceSlot = this.container.getSlot("slotSource");
+		var result = RecipeReg.getRecipeResult("sawmill", sourceSlot.id);
+		if (result){
+			if (this.getElixirStorage() > 1){ 
+				this.requireElixir(0.0125);
+				this.data.progress++;
+			}
+			if (this.data.progress >= (300 / this.data.level)){
+				var resultSlot = this.container.getSlot("slotResult");
+				if (resultSlot.id == result.id && resultSlot.data == result.data && resultSlot.count <= 64 - result.count || resultSlot.id == 0){
+					sourceSlot.count--;
+					resultSlot.id = result.id;
+					resultSlot.data = result.data;
+					resultSlot.count += result.count;
+					this.container.validateAll();
+					this.data.progress = 0;
+				}
+			}
+		}
+		else {
+			this.data.progress = 0;
+		}
+		this.container.setScale("progress", this.data.progress / (300 * this.data.level));
+	}
+});
+
+
 var STORING_MACHINES = [
 		BlockID.elixir_collector,
 		BlockID.elixir_storage
 	]
+
+
+ToolAPI.addToolMaterial("hell_tools", BASE_TOOL_MATERIAL);
+
+var hell_sword_material = clone(BASE_TOOL_MATERIAL);
+
+hell_sword_material.durability = 2775;
+
+ToolAPI.addToolMaterial("hell_sword", hell_sword_material);
+
+var chloro_sword_material = clone(BASE_TOOL_MATERIAL);
+
+chloro_sword_material.durability = 4200;
+
+ToolAPI.addToolMaterial("chloro_sword", chloro_sword_material);
+
+ToolAPI.registerTool(ItemID.hell_pickaxe, "hell_tools", ["stone"],  {
+	damage: 1,
+	
+	onAttack: function(carriedItem, victim){
+		Entity.setFire(victim, 35);
+	}
+});
+
+ToolAPI.registerTool(ItemID.hell_shovel, "hell_tools", ["dirt"],  {
+	damage: 1,
+	
+	onAttack: function(carriedItem, victim){
+		Entity.setFire(victim, 35);
+	}
+});
+
+ToolAPI.registerTool(ItemID.hell_axe, "hell_tools", ["plant", "wood"],  {
+	damage: 0,
+	
+	onAttack: function(carriedItem, victim){
+		Entity.setFire(victim, 35);
+	}
+});
+
+ToolAPI.registerSword(ItemID.hell_sword, "hell_sword", {
+	damage: 5,
+	
+	onAttack: function(carriedItem, victim){
+		Entity.setFire(victim, 45);
+	}
+});
+
+ToolAPI.registerSword(ItemID.chloro_sword, "chloro_sword", {
+	damage: 4
+});
+
+ToolAPI.registerTool(ItemID.chloro_pickaxe, "hell_tools", ["stone"], {
+	damage: 4,
+	
+	tick: regenerateChloro
+});
+
+ToolAPI.registerTool(ItemID.chloro_axe, "hell_tools", ["wood"], {
+	damage: 2,
+	
+	tick: regenerateChloro
+});
+
+ToolAPI.registerTool(ItemID.chloro_shovel, "hell_tools", ["dirt"], {
+	damage: 4,
+	
+	tick: regenerateChloro
+});
+
+function regenerateChloro(){
+	var pos = Player.getPosition();
+	var item = Player.getCarriedItem()
+	if (World.canSeeSky(pos.x, pos.y, pos.z) && item.data > 0){
+		Player.setCarriedItem(item.id, item.count, getTimer(20) ? item.data-- : pass());
+	}
+}
+
+
+IDRegistry.genItemID("connection_staff");
+
+Item.createItem("connection_staff", "Connection Staff", {name: "connectstaff"});
+
+Recipes.addShaped({id: ItemID.connection_staff, count: 1, data: 0}, [
+	" cm",
+	"ccc",
+	"cc "
+], ["c", ItemID.hardened_composite, 0, "m", ItemID.crystal, 0]);
+
+Item.registerUseFunction("connection_staff", function(coords, item, block){
+	var tile = World.getTileEntity(coords.x, coords.y, coords.z);
+	if (connectstaff_mode.name == "input" && tile){
+		connectstaff_mode.input = tile;
+		connectstaff_mode.name = "output";
+		Game.message("Machine at coords " + coords.x + ", " + coords.y + ", " + coords.z + " set as input");
+		tile = null;
+	}
+	if (connectstaff_mode.name == "output" && tile){
+		connectstaff_mode.input.data.output = {x: tile.x, y: tile.y, z: tile.z};
+		connectstaff_mode.name = "input";
+		Game.message("Machine at coords " + coords.x + ", " + coords.y + ", " + coords.z + " set as output");
+		tile = null;
+	}
+});
+
+Callback.addCallback("LevelLoaded", function(){
+	connectstaff_mode.name = "input";
+});
+
+
+IDRegistry.genBlockID("chronorouter");
+
+Block.createBlock("chronorouter", [{name: "Chronorouter", texture: [["brassblock", 0], ["chronoblock", 1], ["chronoblock", 0]], inCreative: true}]);
+
+Recipes.addShaped({id: BlockID.chronorouter, count: 1, data: 0}, [
+	"v",
+	"k",
+	"m"
+], ["v", 256, -1, "k", ItemID.chrono_kernel, 0, "m", BlockID.machine_block, 0]);
+
+var RouterGUI = new UI.StandartWindow({
+	standart: {
+		inventory: {"standart": true},
+		header: { text: {
+			text: "Chronorouter"}
+		},
+		background: {standart: true}	
+	},
+	
+	drawing: [
+		{type: "bitmap", x: 800, y: 100, bitmap: "elixir_scale", scale: 3} 
+	],
+	
+	elements: {
+			"elixir_scale": {type: "scale", x: 800, y: 100, bitmap: "scale_pattern", direction: 1, scale: 3},
+			"level": {type: "text", x: 500, y: 100, text: "Level: 1", width: 300, height: 30},
+			"elixir": {type: "text", x: 500, y: 150, text: "Elixir: 0", width: 300, height: 30},
+			"slotSource": {type: "slot", x: 500, y: 200}
+		}
+	});
+
+/*MechRegistry.registerPrototype(BlockID.chronorouter, {
+	defaultValues: {
+		isStoring: false
+	},
+	
+	getGuiScreen: function(){
+		return RouterGUI;
+	},
+	
+	init: function(){
+	
+	},
+
+	tick: function(){
+		var chest = World.getContainer(this.x, this.y-1, this.z);
+		var source = this.container.getSlot("slotSource");
+		if (chest && this.getElixirStorage() > 1) for (var slot in chest.slots){
+			chest.refreshSlots();
+			if (source.slot == chest.slots[slot].id && source.slot == chest.slots[slot].data && chest.slots[slot].count <= 64 - source.count || chest.slots[slot].id == 0){
+				source.count--;
+				chest.slots[slot].id = source.id;
+				chest.slots[slot].data = source.data;
+				chest.slots[slot].count++;
+				this.requireElixir(0.0125);	this.container.validateAll();
+				chest.applyChanges();
+				chest.validateAll();
+				break;
+			}
+		}
+	}
+});*/
 
 

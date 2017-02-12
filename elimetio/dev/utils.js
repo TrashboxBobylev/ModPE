@@ -1,5 +1,27 @@
 var MINECRAFT_HOUR_TIME = 1000;
 
+var BASE_TOOL_MATERIAL = {
+	level: 4,
+	damage: 5,
+	durability: 3400,
+	efficiency: 14
+}
+
+ToolAPI.registerTool_ = ToolAPI.registerTool;
+
+ToolAPI.registerTool = function(id, material, blocks, prototype){
+	if (prototype.tick) {
+	 Callback.addCallback("tick", function(){
+			if (Player.getCarriedItem().id == id) prototype.tick();
+	 });
+	};
+	ToolAPI.registerTool_(id, material, blocks, prototype);
+}
+
+function pass(){
+	var d = 0;
+}
+
 function random() {
 	switch (arguments.length){
 	case 1: 
@@ -111,3 +133,25 @@ function getTileEntityInArea(x, y, z, radius){
 	}
 	return allTileInArea;
 }
+
+function clone(obj){
+	var clone_obj = {};
+	for (var member in obj){
+		if (typeof obj != "object"){
+			clone_obj[member] = obj[member];
+		}
+		else{
+			clone_obj[member] = clone(obj[member]);
+		}
+	}
+	return clone_obj;
+}
+
+function pass(){
+	var a;
+}
+
+var connectstaff_mode = {
+	name: "input"
+};
+
